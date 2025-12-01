@@ -5,7 +5,7 @@ Each agent represents one day's gift from the classic song "The Twelve Days of C
 These agents implement the A2A protocol using python-a2a library.
 """
 
-from python_a2a import A2AServer, skill, agent, TaskStatus, TaskState, AgentCard
+from python_a2a import A2AServer, skill, TaskStatus, TaskState, AgentCard
 
 # Gift data for each day
 GIFTS = {

@@ -20,7 +20,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.gift_agents import get_gift_agent, get_gift_for_day, get_all_gifts, GIFTS
+from src.gift_agents import get_gift_agent, GIFTS
 from src.orchestrator import ChristmasOrchestratorAgent
 
 

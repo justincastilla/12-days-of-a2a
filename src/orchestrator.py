@@ -5,7 +5,9 @@ This orchestrator agent coordinates with all 12 gift agents to assemble
 the complete "12 Days of Christmas" song response.
 """
 
-from python_a2a import A2AServer, skill, agent, TaskStatus, TaskState, AgentCard
+import re
+
+from python_a2a import A2AServer, skill, TaskStatus, TaskState, AgentCard
 from gift_agents import get_gift_for_day, GIFTS
 
 
@@ -93,7 +95,6 @@ class ChristmasOrchestratorAgent(A2AServer):
             response_text = self.get_gift_summary()
         elif "day" in text:
             # Try to extract day number
-            import re
             day_match = re.search(r'day\s*(\d+)', text)
             if day_match:
                 day = int(day_match.group(1))
