@@ -1,1 +1,1 @@
-python-a2a>=0.44
+python-a2a>=0.4.4
