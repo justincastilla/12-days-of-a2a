@@ -3,12 +3,15 @@ Main Orchestrator Agent for the 12 Days of Christmas A2A Demonstration
 
 This orchestrator agent coordinates with all 12 gift agents to assemble
 the complete "12 Days of Christmas" song response.
+
+Integrates with Elastic Agent Builder to enrich gift information with search results.
 """
 
 import re
 
 from python_a2a import A2AServer, skill, TaskStatus, TaskState, AgentCard
-from gift_agents import get_gift_for_day, GIFTS
+from gift_agents import get_gift_for_day, get_gift_agent, GIFTS
+from elastic_search_agent import get_elastic_agent
 
 
 class ChristmasOrchestratorAgent(A2AServer):
@@ -70,7 +73,7 @@ class ChristmasOrchestratorAgent(A2AServer):
         description="Get a summary of all gifts",
         tags=["christmas", "gifts", "summary"]
     )
-    def get_gift_summary(self) -> str:
+    def get_gift_summary(self, include_elastic: bool = False) -> str:
         """Get a summary of all gifts received."""
         lines = ["🎄 Summary of all gifts from the 12 Days of Christmas 🎄", ""]
         total_items = 0
@@ -79,10 +82,52 @@ class ChristmasOrchestratorAgent(A2AServer):
             gift_info = GIFTS[day]
             lines.append(f"Day {day:2d}: {gift_info['quantity']:2d} {gift_info['gift']}")
             total_items += gift_info['quantity']
+            
+            # Optionally include Elastic search results
+            if include_elastic:
+                elastic_agent = get_elastic_agent()
+                if elastic_agent.is_enabled():
+                    # Note: This would be async in production, simplified for demo
+                    try:
+                        from elastic_search_agent import search_gift
+                        info = search_gift(gift_info['gift'], day)
+                        if info:
+                            lines.append(f"         📝 {info[:100]}...")  # First 100 chars
+                    except Exception as e:
+                        pass  # Silently skip if Elastic not available
 
         lines.append("")
         lines.append(f"Total items received: {total_items}")
         return "\n".join(lines)
+
+    @skill(
+        name="Search Gift with Elastic",
+        description="Search for information about a specific gift using Elastic",
+        tags=["christmas", "gift", "elastic", "search"]
+    )
+    def search_gift_info(self, day: int) -> str:
+        """Search for information about a specific day's gift in Elastic."""
+        if day < 1 or day > 12:
+            return f"Error: Day must be between 1 and 12, got {day}"
+        
+        gift_info = GIFTS[day]
+        gift_name = gift_info['gift']
+        
+        # Try to get information from Elastic
+        elastic_agent = get_elastic_agent()
+        if not elastic_agent.is_enabled():
+            return f"Day {day}: {gift_info['quantity']} {gift_name}\n\n(Elastic integration not configured - set ES_AGENT_URL and ES_API_KEY in .env file)"
+        
+        try:
+            from elastic_search_agent import search_gift
+            elastic_info = search_gift(gift_name, day)
+            
+            if elastic_info:
+                return f"Day {day}: {gift_info['quantity']} {gift_name}\n\nInformation from Elastic:\n{elastic_info}"
+            else:
+                return f"Day {day}: {gift_info['quantity']} {gift_name}\n\n(No additional information found in Elastic)"
+        except Exception as e:
+            return f"Day {day}: {gift_info['quantity']} {gift_name}\n\n(Error searching Elastic: {str(e)})"
 
     def handle_task(self, task):
         """Handle incoming task requests."""
@@ -91,7 +136,18 @@ class ChristmasOrchestratorAgent(A2AServer):
         text = content.get("text", "").lower() if isinstance(content, dict) else ""
 
         # Determine what type of response to generate
-        if "summary" in text:
+        if "search" in text or "elastic" in text:
+            # Search for a specific gift
+            day_match = re.search(r'day\s*(\d+)', text)
+            if day_match:
+                day = int(day_match.group(1))
+                if 1 <= day <= 12:
+                    response_text = self.search_gift_info(day)
+                else:
+                    response_text = "Please specify a day between 1 and 12."
+            else:
+                response_text = "Please specify which day you'd like to search for (1-12)."
+        elif "summary" in text:
             response_text = self.get_gift_summary()
         elif "day" in text:
             # Try to extract day number

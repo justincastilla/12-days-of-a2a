@@ -82,6 +82,17 @@ def show_specific_day(day: int):
     print()
 
 
+def search_elastic_for_day(day: int):
+    """Search Elastic for information about a specific day's gift."""
+    if day < 1 or day > 12:
+        print(f"Error: Day must be between 1 and 12, got {day}")
+        return
+
+    orchestrator = ChristmasOrchestratorAgent()
+    print(orchestrator.search_gift_info(day))
+    print()
+
+
 def start_server(port: int = 5000):
     """Start the orchestrator as an A2A server."""
     try:
@@ -128,6 +139,11 @@ def main():
         action="store_true",
         help="Show individual agent demonstrations"
     )
+    parser.add_argument(
+        "--elastic", "-e",
+        action="store_true",
+        help="Search Elastic for gift information (requires configuration in .env)"
+    )
 
     args = parser.parse_args()
 
@@ -135,6 +151,17 @@ def main():
 
     if args.server:
         start_server(args.port)
+    elif args.elastic:
+        # Search Elastic for all days or specific day
+        if args.day:
+            search_elastic_for_day(args.day)
+        else:
+            print("🔍 Searching Elastic for information about all 12 gifts:")
+            print("-" * 50)
+            print()
+            for day in range(1, 13):
+                search_elastic_for_day(day)
+                print()
     elif args.day:
         show_specific_day(args.day)
     elif args.summary:

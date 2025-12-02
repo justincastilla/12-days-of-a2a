@@ -3,9 +3,12 @@ Gift Agents for the 12 Days of Christmas A2A Demonstration
 
 Each agent represents one day's gift from the classic song "The Twelve Days of Christmas".
 These agents implement the A2A protocol using python-a2a library.
+
+Integrates with Elastic Agent Builder to search for additional information about each gift.
 """
 
 from python_a2a import A2AServer, skill, TaskStatus, TaskState, AgentCard
+from elastic_search_agent import search_gift
 
 # Gift data for each day
 GIFTS = {
@@ -51,14 +54,38 @@ def create_gift_agent(day: int, base_port: int = 5001):
             description=f"Get the gift for day {day} of Christmas",
             tags=["christmas", "gift", f"day{day}"]
         )
-        def get_gift(self):
-            """Return the gift for this day."""
-            return f"{self.quantity} {self.gift}"
+        def get_gift(self, include_elastic_info: bool = False):
+            """Return the gift for this day, optionally with Elastic search results."""
+            gift_text = f"{self.quantity} {self.gift}"
+            
+            # If Elastic integration is requested, search for additional info
+            if include_elastic_info:
+                elastic_info = search_gift(self.gift, self.day)
+                if elastic_info:
+                    gift_text += f"\n\nAdditional information from Elastic:\n{elastic_info}"
+            
+            return gift_text
+
+        @skill(
+            name="Get Gift with Elastic",
+            description=f"Get the gift for day {day} with information from Elastic search",
+            tags=["christmas", "gift", "elastic", f"day{day}"]
+        )
+        def get_gift_with_elastic(self):
+            """Return the gift with Elastic search information."""
+            return self.get_gift(include_elastic_info=True)
 
         def handle_task(self, task):
             """Handle incoming task requests."""
-            # Return the gift for this day
-            gift_text = self.get_gift()
+            # Check if the request asks for Elastic information
+            message_data = task.message or {}
+            content = message_data.get("content", {})
+            text = content.get("text", "").lower() if isinstance(content, dict) else ""
+            
+            # Use Elastic if requested
+            include_elastic = "elastic" in text or "search" in text or "information" in text
+            gift_text = self.get_gift(include_elastic_info=include_elastic)
+            
             task.artifacts = [{
                 "parts": [{"type": "text", "text": gift_text}]
             }]
