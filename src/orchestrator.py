@@ -101,8 +101,9 @@ class ChristmasOrchestratorAgent(A2AServer):
                         info = search_gift(gift_info['gift'], day)
                         if info:
                             lines.append(f"         📝 {info[:100]}...")  # First 100 chars
-                    except Exception as e:
-                        pass  # Silently skip if Elastic not available
+                    except (ImportError, RuntimeError, ConnectionError) as e:
+                        # Skip if module not found, runtime error, or connection issue
+                        pass
 
         lines.append("")
         lines.append(f"Total items received: {total_items}")

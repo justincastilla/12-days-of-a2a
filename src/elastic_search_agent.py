@@ -7,6 +7,7 @@ to search for documents containing information about the 12 Days of Christmas gi
 
 import asyncio
 import os
+import threading
 from typing import Optional, Dict
 from dotenv import load_dotenv
 import httpx
@@ -118,15 +119,20 @@ class ElasticSearchAgent:
             self._agent = None
 
 
-# Global instance
+# Global instance with thread safety
 _elastic_agent = None
+_elastic_agent_lock = threading.Lock()
 
 
 def get_elastic_agent() -> ElasticSearchAgent:
-    """Get the global Elastic search agent instance."""
+    """Get the global Elastic search agent instance (thread-safe singleton)."""
     global _elastic_agent
     if _elastic_agent is None:
-        _elastic_agent = ElasticSearchAgent()
+        with _elastic_agent_lock:
+            # Double-check locking pattern
+            if _elastic_agent is None:
+                _elastic_agent = ElasticSearchAgent()
+    return _elastic_agent
     return _elastic_agent
 
 
@@ -159,17 +165,8 @@ def search_gift(gift_name: str, day: int) -> Optional[str]:
         Search results or None
     """
     try:
-        # Create a new event loop if none exists
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                raise RuntimeError("Event loop is closed")
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        # Run the async search
-        return loop.run_until_complete(search_gift_async(gift_name, day))
+        # Use asyncio.run() which properly manages the event loop
+        return asyncio.run(search_gift_async(gift_name, day))
     except Exception as e:
         print(f"Warning: Failed to search for {gift_name}: {e}")
         return None
