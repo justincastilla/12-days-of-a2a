@@ -8,7 +8,11 @@ Integrates with Elastic Agent Builder to search for additional information about
 """
 
 from python_a2a import A2AServer, skill, TaskStatus, TaskState, AgentCard
-from elastic_search_agent import search_gift
+
+try:
+    from elastic_search_agent import search_gift
+except ImportError:
+    from .elastic_search_agent import search_gift
 
 # Gift data for each day
 GIFTS = {

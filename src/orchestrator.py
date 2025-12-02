@@ -10,8 +10,13 @@ Integrates with Elastic Agent Builder to enrich gift information with search res
 import re
 
 from python_a2a import A2AServer, skill, TaskStatus, TaskState, AgentCard
-from gift_agents import get_gift_for_day, get_gift_agent, GIFTS
-from elastic_search_agent import get_elastic_agent
+
+try:
+    from gift_agents import get_gift_for_day, get_gift_agent, GIFTS
+    from elastic_search_agent import get_elastic_agent
+except ImportError:
+    from .gift_agents import get_gift_for_day, get_gift_agent, GIFTS
+    from .elastic_search_agent import get_elastic_agent
 
 
 class ChristmasOrchestratorAgent(A2AServer):
@@ -89,7 +94,10 @@ class ChristmasOrchestratorAgent(A2AServer):
                 if elastic_agent.is_enabled():
                     # Note: This would be async in production, simplified for demo
                     try:
-                        from elastic_search_agent import search_gift
+                        try:
+                            from elastic_search_agent import search_gift
+                        except ImportError:
+                            from .elastic_search_agent import search_gift
                         info = search_gift(gift_info['gift'], day)
                         if info:
                             lines.append(f"         📝 {info[:100]}...")  # First 100 chars
@@ -119,7 +127,10 @@ class ChristmasOrchestratorAgent(A2AServer):
             return f"Day {day}: {gift_info['quantity']} {gift_name}\n\n(Elastic integration not configured - set ES_AGENT_URL and ES_API_KEY in .env file)"
         
         try:
-            from elastic_search_agent import search_gift
+            try:
+                from elastic_search_agent import search_gift
+            except ImportError:
+                from .elastic_search_agent import search_gift
             elastic_info = search_gift(gift_name, day)
             
             if elastic_info:
