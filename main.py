@@ -7,10 +7,14 @@ by creating 12 sub-agents (one for each day of Christmas) and a main
 orchestrator agent that coordinates all of them.
 
 Usage:
-    python main.py                  # Run the demo
-    python main.py --day 5          # Show only day 5
-    python main.py --summary        # Show gift summary
-    python main.py --server         # Start as A2A server
+    python main.py                          # Run the full demo (agents + summary + song)
+    python main.py --day 5                  # Show only day 5 verse
+    python main.py --summary                # Show gift summary only
+    python main.py --agents                 # Show individual agent demonstrations
+    python main.py --elastic                # Search Elastic for all gifts (requires .env)
+    python main.py --elastic --day 5        # Search Elastic for day 5 gift
+    python main.py --server                 # Start as A2A server (port 5000)
+    python main.py --server --port 8080     # Start server on custom port
 """
 
 import argparse
@@ -67,7 +71,7 @@ def demonstrate_orchestrator():
 def show_gift_summary():
     """Display a summary of all gifts."""
     orchestrator = ChristmasOrchestratorAgent()
-    print(orchestrator.get_gift_summary())
+    print(orchestrator.get_gift_summary(include_elastic=True))
     print()
 
 
@@ -82,10 +86,22 @@ def show_specific_day(day: int):
     print()
 
 
+def search_elastic_for_day(day: int):
+    """Search Elastic for information about a specific day's gift."""
+    if day < 1 or day > 12:
+        print(f"Error: Day must be between 1 and 12, got {day}")
+        return
+
+    orchestrator = ChristmasOrchestratorAgent()
+    print(orchestrator.search_gift_info(day))
+    print()
+
+
 def start_server(port: int = 5000):
     """Start the orchestrator as an A2A server."""
     try:
         from python_a2a import run_server
+
         orchestrator = ChristmasOrchestratorAgent()
         print(f"🚀 Starting A2A server on port {port}...")
         print(f"   Send requests to http://localhost:{port}")
@@ -102,31 +118,26 @@ def main():
     parser = argparse.ArgumentParser(
         description="12 Days of Christmas - A2A Protocol Demonstration"
     )
+    parser.add_argument("--day", "-d", type=int, help="Show only a specific day (1-12)")
     parser.add_argument(
-        "--day", "-d",
-        type=int,
-        help="Show only a specific day (1-12)"
+        "--summary", "-s", action="store_true", help="Show only the gift summary"
     )
+    parser.add_argument("--server", action="store_true", help="Start as an A2A server")
     parser.add_argument(
-        "--summary", "-s",
-        action="store_true",
-        help="Show only the gift summary"
-    )
-    parser.add_argument(
-        "--server",
-        action="store_true",
-        help="Start as an A2A server"
-    )
-    parser.add_argument(
-        "--port", "-p",
+        "--port",
+        "-p",
         type=int,
         default=5000,
-        help="Port for the A2A server (default: 5000)"
+        help="Port for the A2A server (default: 5000)",
     )
     parser.add_argument(
-        "--agents",
+        "--agents", action="store_true", help="Show individual agent demonstrations"
+    )
+    parser.add_argument(
+        "--elastic",
+        "-e",
         action="store_true",
-        help="Show individual agent demonstrations"
+        help="Search Elastic for gift information (requires configuration in .env)",
     )
 
     args = parser.parse_args()
@@ -135,6 +146,17 @@ def main():
 
     if args.server:
         start_server(args.port)
+    elif args.elastic:
+        # Search Elastic for all days or specific day
+        if args.day:
+            search_elastic_for_day(args.day)
+        else:
+            print("🔍 Searching Elastic for information about all 12 gifts:")
+            print("-" * 50)
+            print()
+            for day in range(1, 13):
+                search_elastic_for_day(day)
+                print()
     elif args.day:
         show_specific_day(args.day)
     elif args.summary:
